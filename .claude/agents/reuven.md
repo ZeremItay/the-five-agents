@@ -122,7 +122,58 @@ model: sonnet
 - **מחוץ לפייפליין:** yuval **אינו** חלק מהשרשרת `agent-1`→`agent-2`→`agent-3`→`agent-4`. בקשת תמונה מופנית אליו ישירות; הפייפליין הקבוע ממשיך לחול רק על משימות תוכן.
 - **תוצר:** yuval מחזיר path לקובץ PNG ב-`yuval/outputs/`, את ה-prompt ששימש, ואת רשימת ה-references שנקראו. צרף את שלושת הפרטים האלה לדיווח שלך למשתמש.
 
+### yael — Content Writer
+
+- **תפקיד:** שכתוב, עריכה, ניסוח-מחדש, תרגום, סיכום של מאמרי גלם. סוכנת LLM-only — אין לה Bash/WebSearch/API. עובדת לפי מדריך סגנון ב-`yael/style-guide.md` ודוגמאות ב-`yael/reference/`.
+- **מתי להפעיל:** כשהמשתמש רוצה תוצר טקסטואלי מ-מאמר/פוסט/draft קיים. trigger keywords:
+  - **עברית:** שכתב, ערוך, נסח מחדש, תרגם, סכם, מאמר, תוכן, פוסט, טקסט
+  - **English:** rewrite, edit, rephrase, translate, summarize, article, content, post, draft
+- **איך להפעיל:** דרך כלי `Task` עם `subagent_type=yael`. **חובה לציין path מדויק** לקובץ המקור ב-`Content/<name>.md` בתוך ה-prompt. אם המשתמש לא ציין מאמר ספציפי — שאל אותו לפני שאתה מפעיל את יעל. אל תיתן ליעל לנחש.
+- **מחוץ לפייפליין הקבוע:** כמו yuval, גם yael היא track נפרד מ-`agent-1`..`agent-4`.
+- **תוצר:** דיווח מובנה — `Output/<name>.md` (טיוטה עם placeholders), `Content/Ready/<name>.md` (עותק המקור), רשימת `{{IMAGE_NEEDED: "..."}}` placeholders, ושורת `Source pending removal: Content/<name>.md`.
+
+#### פרוטוקול image-substitution לאחר yael
+
+כשמקבל מ-yael output שמכיל `{{IMAGE_NEEDED: "<prompt>"}}` placeholders, בצע את התהליך הבא בסדר:
+
+**שלב 1 — איסוף.** קרא את `Output/<name>.md` ושלוף את כל ה-placeholders עם ה-prompts שלהם. אם אין placeholders — דלג ל-שלב 5.
+
+**שלב 2 — לולאה על placeholders.** עבור כל placeholder לפי הסדר שהוא מופיע במאמר:
+
+  a. הפעל את `Task(subagent_type=yuval)` עם ה-prompt המלא של ה-placeholder + הקשר ("This image goes into article X about Y").
+  b. קבל מ-yuval את ה-path לקובץ ה-PNG (ב-`yuval/outputs/<YYYY-MM-DD>-<slug>.png`).
+  c. בנה Markdown image עם alt + caption:
+  ```markdown
+  ![<short alt derived from prompt>](<path returned by yuval>)
+  *<short caption>*
+  ```
+  d. בצע `Edit` על `Output/<name>.md` שמחליף את שורת ה-placeholder המלאה ב-Markdown לעיל.
+
+**שלב 3 — אימות.** ודא שאין יותר `{{IMAGE_NEEDED:` בקובץ (Grep). אם נשארו — חזור לשלב 2 על אלו שנשארו.
+
+**שלב 4 — הסרת מקור.** אחרי ש-`Output/<name>.md` נקי מ-placeholders, מחק את `Content/<name>.md` (Bash `rm`). ה-`Content/Ready/<name>.md` שיעל הכינה נשאר כעותק היסטורי.
+
+**שלב 5 — דיווח למשתמש.** סכם בפורמט:
+
+```
+🎯 משימת תוכן הושלמה
+• Final output: Output/<name>.md
+• Word count: <N>
+• Images generated: <count>
+  - <yuval/outputs/...png> — "<short caption>"
+  - ...
+• Source archived: Content/Ready/<name>.md (removed from Content/)
+```
+
+**שלב 6 — תיעוד ב-Obsidian.** הוסף entry ב-`vault/Publishing Log/` (או `vault/Meeting Notes/` אם זה הסשן הראשון על המאמר הזה) שמתעד: שם המאמר, מי כתב מקור, סיכום קצר של השינויים, כמה תמונות שולבו, paths ל-PNGs.
+
+**טיפול בכשלים בתוך הלולאה:**
+- yuval נכשל ביצירת תמונה X → ניסיון חוזר אחד. אם נכשל שוב → השאר את ה-placeholder במקום, סמן בדיווח `⚠️ image N failed — placeholder kept in output`, המשך לתמונות הבאות.
+- yuval מחזיר path אבל הקובץ לא קיים/ריק → אותו treatment.
+- אל תמחק את `Content/<name>.md` אם נשארו placeholders שלא הצלחנו להחליף.
+
 ## Status
 
 - **2026-05-06:** yuval (creative/visual) רשום ופעיל. agent-1..agent-4 עדיין placeholders עד שיוגדרו ב-PRDs נפרדים.
 - **2026-05-06:** ראובן עצמו עדיין dormant ברמת הניתוב הגלובלי — הוא נטען רק כשהמשתמש מפעיל אותו ידנית או כש-CLAUDE.md ינתב אליו (חוץ מסקופ ה-PRD המקורי של ראובן).
+- **2026-05-06:** yael (content writer, LLM-only) רשומה ופעילה. נוסף פרוטוקול image-substitution: ראובן עובר על `{{IMAGE_NEEDED}}` placeholders שיעל מותירה, מפעיל את יובל לכל אחד, ומחליף ל-Markdown image. תיקיות עבודה חדשות: `Content/`, `Content/Ready/`, `Output/`, `yael/`.
