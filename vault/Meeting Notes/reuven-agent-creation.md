@@ -24,3 +24,15 @@ Implementation of PRD v1.0 (May 2026, author: Itay Zerem + Claude) for **ראו�
   - There's an architectural ambiguity in the PRD between "Reuven is a Task-dispatched subagent" (which can't pause for user input mid-flow) and "Reuven is the main agent's persona" (which can). The agent file works for both interpretations — final wiring is in `CLAUDE.md`, which is the user's territory.
   - Section 8.8 (PRD success criteria) requires the final output to be a unified synthesis, not 4 outputs glued together. This is encoded in step 5 of the task-reception protocol (`סנתז אותם לתוצר אחד עקבי`).
 - **Related:** [[obsidian-vault-workflow-bootstrap]], [[plugin-installations]]
+
+### 2026-05-06 — Yuval registered as off-pipeline sub-agent [shipped]
+
+- **What was done:** Appended a new section to `reuven.md` — "סוכני המשנה תחת פיקודך / Sub-Agents Under Your Command" — registering `yuval` (creative/visual) with Hebrew + English trigger keywords. Also added a `## Status` section dating today's change. Reuven now knows to dispatch image requests **directly** to yuval via `Task(subagent_type=yuval)`, **bypassing** the agent-1..4 pipeline entirely.
+- **Decisions:**
+  - **Off-pipeline by design.** Yuval's section explicitly states he is NOT part of the fixed `agent-1`→`agent-2`→`agent-3`→`agent-4` chain. Iron rule #2 (fixed pipeline order) is preserved — it applies to the content pipeline only; visual requests are a parallel track.
+  - **Bilingual triggers.** Hebrew keywords ("תמונה של", "ציור של", "באנר"...) and English keywords ("generate image", "thumbnail"...) both listed so Reuven can route from either language.
+  - **In-file Status section** added per user request, even though `[[yuval-creative-agent-and-gpt-image-gen-skill]]` (the new vault note) carries the deeper history. Status is a high-level "what's wired today" snapshot.
+- **Notes / Caveats:**
+  - Tools-list audit (Open Question) still unresolved — Reuven's `Bash`/`Edit` are still in tension with "no execution". Will revisit after first real pipeline run.
+  - Reuven's actual dispatch of yuval not tested live yet — see [[yuval-creative-agent-and-gpt-image-gen-skill#Open Questions]].
+- **Related:** [[yuval-creative-agent-and-gpt-image-gen-skill]]
